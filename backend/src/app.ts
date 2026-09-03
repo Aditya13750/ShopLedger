@@ -8,6 +8,10 @@ import { notFoundHandler, errorHandler } from './middleware/errorMiddleware';
 
 const app: Express = express();
 
+// Trust reverse proxy (required for Render, Railway, Vercel, etc.)
+// This allows express-rate-limit to correctly identify client IPs
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(helmet());
 
@@ -16,13 +20,17 @@ const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
+  // Render backend self-origin
+  'https://shopledger-bmhy.onrender.com',
+  // Allow all Vercel preview deployments for the frontend
+  /\.vercel\.app$/,
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, curl, postman, or server-to-server)
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      if (!origin || allowedOrigins.some(o => o instanceof RegExp ? o.test(origin) : o === origin) || process.env.NODE_ENV !== 'production') {
         callback(null, true);
       } else {
         callback(new Error('CORS policy: Not allowed by Access-Control-Allow-Origin'));
