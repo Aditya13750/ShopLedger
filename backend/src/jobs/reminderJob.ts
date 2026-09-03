@@ -8,20 +8,19 @@ export const initReminderCron = () => {
   // Run every hour to check whether the current time matches reminderSettings.reminderTime
   reminderJobInstance = cron.schedule('0 * * * *', async () => {
     try {
-      const settings = await ShopSettings.findOne();
-      if (!settings || !settings.reminderSettings?.enabled) {
-        return;
-      }
-
       const now = new Date();
       const currentHour = String(now.getHours()).padStart(2, '0');
-      const configuredTime = settings.reminderSettings.reminderTime || '10:00';
-      const [targetHour] = configuredTime.split(':');
+      const settingsList = await ShopSettings.find({ 'reminderSettings.enabled': true });
 
-      if (currentHour === targetHour) {
-        console.log(`⏰ [Reminder Cron] Triggering scheduled payment reminders at ${configuredTime}...`);
-        const result = await ReminderService.processAutomatedReminders();
-        console.log(`✅ [Reminder Cron] Processed ${result.processed}, Sent ${result.sent}, Skipped ${result.skipped}, Failed ${result.failed}`);
+      for (const settings of settingsList) {
+        const configuredTime = settings.reminderSettings?.reminderTime || '10:00';
+        const [targetHour] = configuredTime.split(':');
+
+        if (currentHour === targetHour) {
+          console.log(`⏰ [Reminder Cron] Triggering scheduled payment reminders at ${configuredTime}...`);
+          const result = await ReminderService.processAutomatedReminders(settings.userId);
+          console.log(`✅ [Reminder Cron] Processed ${result.processed}, Sent ${result.sent}, Skipped ${result.skipped}, Failed ${result.failed}`);
+        }
       }
     } catch (err) {
       console.error('❌ [Reminder Cron] Execution error:', err);

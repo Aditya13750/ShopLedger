@@ -40,7 +40,8 @@ export class ReminderController {
 
   static async triggerAutomatedReminders(req: Request, res: Response): Promise<void> {
     try {
-      const result = await ReminderService.processAutomatedReminders();
+      const userId = (req as any).user?._id;
+      const result = await ReminderService.processAutomatedReminders(userId);
       sendSuccess(res, 'Automated reminder cycle executed', result);
     } catch (error: any) {
       sendError(res, error.message || 'Failed to run automated reminders', 500);

@@ -37,15 +37,15 @@ export class ReminderService {
   /**
    * Scheduled runner: Finds eligible customers and dispatches reminders safely
    */
-  static async processAutomatedReminders(): Promise<{
+  static async processAutomatedReminders(userId?: any): Promise<{
     processed: number;
     sent: number;
     skipped: number;
     failed: number;
     logs: any[];
   }> {
-    const settings = await ShopSettings.findOne();
-    if (!settings || !settings.reminderSettings.enabled) {
+    const settings = await ShopSettings.findOne(userId ? { userId } : {});
+    if (!settings || !settings.reminderSettings?.enabled) {
       console.log('Automated reminders are currently disabled in settings.');
       return { processed: 0, sent: 0, skipped: 0, failed: 0, logs: [] };
     }
@@ -55,6 +55,7 @@ export class ReminderService {
     // Find all customers with pending balance at or above threshold
     const eligibleCustomers = await Customer.find({
       totalDueAmount: { $gte: minimumDueAmount || 1 },
+      ...(userId || settings.userId ? { userId: userId || settings.userId } : {}),
     });
 
     let sent = 0;
@@ -88,6 +89,7 @@ export class ReminderService {
         const status = waMessage.status === 'FAILED' ? 'FAILED' : 'SENT';
 
         const reminderLog = new Reminder({
+          ...(userId || settings.userId ? { userId: userId || settings.userId } : {}),
           customer: customer._id,
           dueAmount: customer.totalDueAmount,
           reminderDate: new Date(),

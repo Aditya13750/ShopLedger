@@ -23,7 +23,7 @@ import { Settings } from './pages/settings/Settings';
 
 export const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_relativeSplatPath: true }}>
       <ToastProvider>
         <AuthProvider>
           <Routes>
