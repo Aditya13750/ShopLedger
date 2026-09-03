@@ -22,7 +22,11 @@ export class WhatsAppService {
    * Sanitizes phone number into international format without '+' or spaces (e.g. 919876543210)
    */
   static cleanPhoneNumber(phone: string): string {
-    const cleaned = phone.replace(/[^0-9]/g, '');
+    let cleaned = phone.replace(/[^0-9]/g, '');
+    // If 11 digits starting with 0 (e.g., 08084316170), strip the leading 0
+    if (cleaned.length === 11 && cleaned.startsWith('0')) {
+      cleaned = cleaned.substring(1);
+    }
     // If 10 digits without country code, default to 91 (India)
     if (cleaned.length === 10) {
       return `91${cleaned}`;
