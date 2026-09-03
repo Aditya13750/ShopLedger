@@ -7,6 +7,7 @@ export class BillController {
   static async createBill(req: Request, res: Response): Promise<void> {
     try {
       const { customer, items, discount, tax, paidAmount, billDate, notes, billImage } = req.body;
+      const userId = (req as any).user?._id;
 
       if (!customer) {
         sendError(res, 'Customer is required to create a bill', 400);
@@ -27,7 +28,7 @@ export class BillController {
         billDate: billDate ? new Date(billDate) : undefined,
         notes,
         billImage,
-      });
+      }, userId);
 
       sendSuccess(res, 'Bill created successfully', bill, 201);
     } catch (error: any) {
@@ -39,6 +40,7 @@ export class BillController {
     try {
       const { search, customerId, paymentStatus, startDate, endDate, sortBy, sortOrder, page, limit } =
         req.query;
+      const userId = (req as any).user?._id;
 
       const result = await BillingService.getBills({
         search: search as string,
@@ -50,7 +52,7 @@ export class BillController {
         sortOrder: sortOrder as any,
         page: page ? parseInt(page as string, 10) : undefined,
         limit: limit ? parseInt(limit as string, 10) : undefined,
-      });
+      }, userId);
 
       sendSuccess(res, 'Bills retrieved successfully', result.bills, 200, result.pagination);
     } catch (error: any) {
@@ -61,7 +63,8 @@ export class BillController {
   static async getBillById(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id as string;
-      const bill = await BillingService.getBillById(id);
+      const userId = (req as any).user?._id;
+      const bill = await BillingService.getBillById(id, userId);
       if (!bill) {
         sendError(res, 'Bill not found', 404);
         return;
@@ -75,7 +78,8 @@ export class BillController {
   static async updateBill(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id as string;
-      const updated = await BillingService.updateBill(id, req.body);
+      const userId = (req as any).user?._id;
+      const updated = await BillingService.updateBill(id, req.body, userId);
       if (!updated) {
         sendError(res, 'Bill not found', 404);
         return;
@@ -89,7 +93,8 @@ export class BillController {
   static async deleteBill(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id as string;
-      const result = await BillingService.deleteBill(id);
+      const userId = (req as any).user?._id;
+      const result = await BillingService.deleteBill(id, userId);
       sendSuccess(res, result.message);
     } catch (error: any) {
       sendError(res, error.message || 'Failed to delete bill', 500);
@@ -104,11 +109,13 @@ export class BillController {
       }
 
       const id = req.params.id as string;
+      const userId = (req as any).user?._id;
       const updatedBill = await BillingService.uploadBillImage(
         id,
         req.file.buffer,
         req.file.mimetype,
-        req.file.originalname
+        req.file.originalname,
+        userId
       );
 
       sendSuccess(res, 'Bill image uploaded successfully', {

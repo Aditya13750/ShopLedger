@@ -7,9 +7,13 @@ import { sendSuccess, sendError } from '../utils/apiResponse';
 export class SettingsController {
   static async getSettings(req: Request, res: Response): Promise<void> {
     try {
-      let settings = await ShopSettings.findOne();
+      const userId = (req as any).user?._id;
+      const query = userId ? { userId } : {};
+
+      let settings = await ShopSettings.findOne(query);
       if (!settings) {
         settings = await ShopSettings.create({
+          ...(userId ? { userId } : {}),
           shopName: process.env.DEFAULT_SHOP_NAME || 'ShopLedger Mart',
           shopPhone: process.env.DEFAULT_SHOP_PHONE || '+919876543210',
           currencySymbol: process.env.DEFAULT_CURRENCY || '₹',
@@ -33,9 +37,12 @@ export class SettingsController {
 
   static async updateSettings(req: Request, res: Response): Promise<void> {
     try {
-      let settings = await ShopSettings.findOne();
+      const userId = (req as any).user?._id;
+      const query = userId ? { userId } : {};
+
+      let settings = await ShopSettings.findOne(query);
       if (!settings) {
-        settings = new ShopSettings(req.body);
+        settings = new ShopSettings({ ...(userId ? { userId } : {}), ...req.body });
       } else {
         Object.assign(settings, req.body);
       }

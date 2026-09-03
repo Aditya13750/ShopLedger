@@ -87,8 +87,9 @@ export class BillingService {
     };
   }
 
-  static async createBill(dto: CreateBillDto): Promise<IBill> {
-    const customer = await Customer.findById(dto.customer);
+  static async createBill(dto: CreateBillDto, userId?: any): Promise<IBill> {
+    const customerQuery = userId ? { _id: dto.customer, userId } : { _id: dto.customer };
+    const customer = await Customer.findOne(customerQuery);
     if (!customer) {
       throw new Error('Selected customer does not exist');
     }
@@ -103,6 +104,7 @@ export class BillingService {
     const billNumber = await generateBillNumber();
 
     const bill = new Bill({
+      ...(userId ? { userId } : {}),
       billNumber,
       customer: customer._id,
       billDate: dto.billDate || new Date(),
@@ -126,12 +128,15 @@ export class BillingService {
     return bill.populate('customer');
   }
 
-  static async getBills(options: BillFilterOptions) {
+  static async getBills(options: BillFilterOptions, userId?: any) {
     const page = Math.max(1, Number(options.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(options.limit) || 20));
     const skip = (page - 1) * limit;
 
     const query: any = {};
+    if (userId) {
+      query.userId = userId;
+    }
 
     if (options.customerId) {
       query.customer = options.customerId;
@@ -188,12 +193,14 @@ export class BillingService {
     };
   }
 
-  static async getBillById(id: string): Promise<IBill | null> {
-    return Bill.findById(id).populate('customer');
+  static async getBillById(id: string, userId?: any): Promise<IBill | null> {
+    const query = userId ? { _id: id, userId } : { _id: id };
+    return Bill.findOne(query).populate('customer');
   }
 
-  static async updateBill(id: string, dto: Partial<CreateBillDto>): Promise<IBill | null> {
-    const bill = await Bill.findById(id);
+  static async updateBill(id: string, dto: Partial<CreateBillDto>, userId?: any): Promise<IBill | null> {
+    const query = userId ? { _id: id, userId } : { _id: id };
+    const bill = await Bill.findOne(query);
     if (!bill) {
       throw new Error('Bill not found');
     }
@@ -226,8 +233,9 @@ export class BillingService {
     return bill.populate('customer');
   }
 
-  static async deleteBill(id: string): Promise<{ success: boolean; message: string }> {
-    const bill = await Bill.findById(id);
+  static async deleteBill(id: string, userId?: any): Promise<{ success: boolean; message: string }> {
+    const query = userId ? { _id: id, userId } : { _id: id };
+    const bill = await Bill.findOne(query);
     if (!bill) {
       throw new Error('Bill not found');
     }
@@ -243,7 +251,7 @@ export class BillingService {
       }
     }
 
-    await Bill.findByIdAndDelete(id);
+    await Bill.findByIdAndDelete(bill._id);
 
     // Sync customer balance
     await CustomerService.recalculateCustomerTotals(customerId);
@@ -258,9 +266,11 @@ export class BillingService {
     billId: string,
     fileBuffer: Buffer,
     mimeType: string,
-    originalName: string
+    originalName: string,
+    userId?: any
   ) {
-    const bill = await Bill.findById(billId);
+    const query = userId ? { _id: billId, userId } : { _id: billId };
+    const bill = await Bill.findOne(query);
     if (!bill) {
       throw new Error('Bill not found');
     }

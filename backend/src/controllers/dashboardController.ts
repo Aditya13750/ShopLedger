@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { Customer } from '../models/Customer';
 import { Bill } from '../models/Bill';
 import { Payment } from '../models/Payment';
@@ -9,6 +10,10 @@ export class DashboardController {
   static async getSummary(req: Request, res: Response): Promise<void> {
     try {
       const now = new Date();
+      const userId = (req as any).user?._id;
+      const userObjId = userId ? new mongoose.Types.ObjectId(userId) : null;
+      const userFilter = userId ? { userId } : {};
+      const userMatch = userObjId ? { userId: userObjId } : {};
 
       // Today's boundaries
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -27,27 +32,33 @@ export class DashboardController {
         topDueCustomers,
         recentReminders,
       ] = await Promise.all([
-        Customer.countDocuments(),
-        Bill.aggregate([{ $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
-        Payment.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]),
+        Customer.countDocuments(userFilter),
         Bill.aggregate([
-          { $match: { billDate: { $gte: startOfToday, $lte: endOfToday } } },
+          { $match: userMatch },
+          { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+        ]),
+        Payment.aggregate([
+          { $match: userMatch },
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]),
+        Bill.aggregate([
+          { $match: { ...userMatch, billDate: { $gte: startOfToday, $lte: endOfToday } } },
           { $group: { _id: null, total: { $sum: '$totalAmount' } } },
         ]),
         Bill.aggregate([
-          { $match: { billDate: { $gte: startOfMonth } } },
+          { $match: { ...userMatch, billDate: { $gte: startOfMonth } } },
           { $group: { _id: null, total: { $sum: '$totalAmount' } } },
         ]),
-        Bill.find()
+        Bill.find(userFilter)
           .populate('customer', 'name customerId phoneNumber')
           .sort({ createdAt: -1 })
           .limit(6)
           .lean(),
-        Customer.find({ totalDueAmount: { $gt: 0 } })
+        Customer.find({ ...userFilter, totalDueAmount: { $gt: 0 } })
           .sort({ totalDueAmount: -1 })
           .limit(5)
           .lean(),
-        Reminder.find()
+        Reminder.find(userFilter)
           .populate('customer', 'name customerId phoneNumber')
           .sort({ reminderDate: -1 })
           .limit(5)
@@ -93,10 +104,13 @@ export class DashboardController {
     try {
       const currentYear = new Date().getFullYear();
       const startOfYear = new Date(currentYear, 0, 1);
+      const userId = (req as any).user?._id;
+      const userObjId = userId ? new mongoose.Types.ObjectId(userId) : null;
+      const userMatch = userObjId ? { userId: userObjId } : {};
 
       // Monthly sales aggregation for current year
       const monthlySalesData = await Bill.aggregate([
-        { $match: { billDate: { $gte: startOfYear } } },
+        { $match: { ...userMatch, billDate: { $gte: startOfYear } } },
         {
           $group: {
             _id: { $month: '$billDate' },
@@ -108,7 +122,7 @@ export class DashboardController {
 
       // Monthly payments aggregation for current year
       const monthlyPaymentsData = await Payment.aggregate([
-        { $match: { paymentDate: { $gte: startOfYear } } },
+        { $match: { ...userMatch, paymentDate: { $gte: startOfYear } } },
         {
           $group: {
             _id: { $month: '$paymentDate' },
@@ -138,6 +152,7 @@ export class DashboardController {
 
       // Status breakdown
       const billStatusCounts = await Bill.aggregate([
+        { $match: userMatch },
         {
           $group: {
             _id: '$paymentStatus',

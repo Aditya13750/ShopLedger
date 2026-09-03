@@ -25,8 +25,9 @@ export interface PaymentFilterOptions {
 }
 
 export class PaymentService {
-  static async recordPayment(dto: CreatePaymentDto): Promise<IPayment> {
-    const customer = await Customer.findById(dto.customer);
+  static async recordPayment(dto: CreatePaymentDto, userId?: any): Promise<IPayment> {
+    const customerQuery = userId ? { _id: dto.customer, userId } : { _id: dto.customer };
+    const customer = await Customer.findOne(customerQuery);
     if (!customer) {
       throw new Error('Customer does not exist');
     }
@@ -38,7 +39,8 @@ export class PaymentService {
 
     // If linked to a specific bill, apply payment to bill
     if (dto.bill) {
-      const bill = await Bill.findById(dto.bill);
+      const billQuery = userId ? { _id: dto.bill, userId } : { _id: dto.bill };
+      const bill = await Bill.findOne(billQuery);
       if (bill) {
         bill.paidAmount = Math.round((bill.paidAmount + amount) * 100) / 100;
         bill.dueAmount = Math.max(0, Math.round((bill.totalAmount - bill.paidAmount) * 100) / 100);
@@ -56,6 +58,7 @@ export class PaymentService {
     }
 
     const payment = new Payment({
+      ...(userId ? { userId } : {}),
       customer: customer._id,
       bill: dto.bill ? new mongoose.Types.ObjectId(dto.bill) : undefined,
       amount,
@@ -73,12 +76,15 @@ export class PaymentService {
     return payment.populate(['customer', 'bill']);
   }
 
-  static async getPayments(options: PaymentFilterOptions) {
+  static async getPayments(options: PaymentFilterOptions, userId?: any) {
     const page = Math.max(1, Number(options.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(options.limit) || 20));
     const skip = (page - 1) * limit;
 
     const query: any = {};
+    if (userId) {
+      query.userId = userId;
+    }
 
     if (options.customerId) {
       query.customer = options.customerId;
@@ -124,12 +130,14 @@ export class PaymentService {
     };
   }
 
-  static async getPaymentById(id: string): Promise<IPayment | null> {
-    return Payment.findById(id).populate(['customer', 'bill']);
+  static async getPaymentById(id: string, userId?: any): Promise<IPayment | null> {
+    const query = userId ? { _id: id, userId } : { _id: id };
+    return Payment.findOne(query).populate(['customer', 'bill']);
   }
 
-  static async deletePayment(id: string): Promise<{ success: boolean; message: string }> {
-    const payment = await Payment.findById(id);
+  static async deletePayment(id: string, userId?: any): Promise<{ success: boolean; message: string }> {
+    const query = userId ? { _id: id, userId } : { _id: id };
+    const payment = await Payment.findOne(query);
     if (!payment) {
       throw new Error('Payment record not found');
     }

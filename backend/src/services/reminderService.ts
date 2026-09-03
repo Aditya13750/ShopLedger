@@ -139,8 +139,9 @@ export class ReminderService {
   /**
    * Trigger single manual reminder for a specific customer
    */
-  static async sendManualReminder(customerId: string): Promise<IReminder> {
-    const customer = await Customer.findById(customerId);
+  static async sendManualReminder(customerId: string, userId?: any): Promise<IReminder> {
+    const customerQuery = userId ? { _id: customerId, userId } : { _id: customerId };
+    const customer = await Customer.findOne(customerQuery);
     if (!customer) {
       throw new Error('Customer not found');
     }
@@ -149,11 +150,12 @@ export class ReminderService {
       throw new Error('Customer does not have any pending due amount');
     }
 
-    const waMessage = await WhatsAppService.sendPaymentReminder({ customerId });
+    const waMessage = await WhatsAppService.sendPaymentReminder({ customerId, userId });
 
     const status = waMessage.status === 'FAILED' ? 'FAILED' : 'SENT';
 
     const reminderLog = new Reminder({
+      ...(userId ? { userId } : {}),
       customer: customer._id,
       dueAmount: customer.totalDueAmount,
       reminderDate: new Date(),
@@ -172,12 +174,13 @@ export class ReminderService {
     status?: string;
     page?: number;
     limit?: number;
-  }) {
+  }, userId?: any) {
     const page = Math.max(1, Number(options.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(options.limit) || 20));
     const skip = (page - 1) * limit;
 
     const query: any = {};
+    if (userId) query.userId = userId;
     if (options.customerId) query.customer = options.customerId;
     if (options.status && options.status !== 'ALL') query.status = options.status;
 

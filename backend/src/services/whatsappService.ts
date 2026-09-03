@@ -10,11 +10,13 @@ export interface SendBillOptions {
   billId: string;
   recipientPhone?: string;
   customNote?: string;
+  userId?: any;
 }
 
 export interface SendReminderOptions {
   customerId: string;
   customMessage?: string;
+  userId?: any;
 }
 
 export class WhatsAppService {
@@ -48,7 +50,7 @@ export class WhatsAppService {
       throw new Error('Customer information missing for this bill');
     }
 
-    const settings = await ShopSettings.findOne().lean();
+    const settings = await ShopSettings.findOne(options.userId ? { userId: options.userId } : {}).lean();
     const shopName = settings?.shopName || 'ShopLedger Mart';
     const currency = settings?.currencySymbol || '₹';
 
@@ -78,6 +80,7 @@ Pending Amount: ${currency}${bill.dueAmount.toLocaleString('en-IN')}
 Thank you for your business.`;
 
     const messageRecord = new WhatsAppMessage({
+      ...(options.userId ? { userId: options.userId } : {}),
       customer: customer._id,
       bill: bill._id,
       messageType: 'BILL',
@@ -186,7 +189,7 @@ Thank you for your business.`;
       throw new Error('Customer has no pending balance');
     }
 
-    const settings = await ShopSettings.findOne().lean();
+    const settings = await ShopSettings.findOne(options.userId ? { userId: options.userId } : {}).lean();
     const shopName = settings?.shopName || 'ShopLedger Mart';
     const currency = settings?.currencySymbol || '₹';
 
@@ -207,6 +210,7 @@ Please clear your pending balance at your convenience.
 Thank you.`;
 
     const messageRecord = new WhatsAppMessage({
+      ...(options.userId ? { userId: options.userId } : {}),
       customer: customer._id,
       messageType: 'REMINDER',
       recipientPhone: targetPhone,
@@ -307,12 +311,13 @@ Thank you.`;
     status?: string;
     page?: number;
     limit?: number;
-  }) {
+  }, userId?: any) {
     const page = Math.max(1, Number(options.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(options.limit) || 20));
     const skip = (page - 1) * limit;
 
     const query: any = {};
+    if (userId) query.userId = userId;
     if (options.customerId) query.customer = options.customerId;
     if (options.messageType && options.messageType !== 'ALL') query.messageType = options.messageType;
     if (options.status && options.status !== 'ALL') query.status = options.status;

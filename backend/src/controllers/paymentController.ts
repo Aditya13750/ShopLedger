@@ -6,6 +6,7 @@ export class PaymentController {
   static async recordPayment(req: Request, res: Response): Promise<void> {
     try {
       const { customer, bill, amount, paymentDate, paymentMethod, referenceNumber, notes } = req.body;
+      const userId = (req as any).user?._id;
 
       if (!customer) {
         sendError(res, 'Customer is required to record a payment', 400);
@@ -25,7 +26,7 @@ export class PaymentController {
         paymentMethod: paymentMethod || 'Cash',
         referenceNumber,
         notes,
-      });
+      }, userId);
 
       sendSuccess(res, 'Payment recorded successfully', payment, 201);
     } catch (error: any) {
@@ -36,6 +37,7 @@ export class PaymentController {
   static async getPayments(req: Request, res: Response): Promise<void> {
     try {
       const { customerId, billId, paymentMethod, startDate, endDate, page, limit } = req.query;
+      const userId = (req as any).user?._id;
 
       const result = await PaymentService.getPayments({
         customerId: customerId as string,
@@ -45,7 +47,7 @@ export class PaymentController {
         endDate: endDate as string,
         page: page ? parseInt(page as string, 10) : undefined,
         limit: limit ? parseInt(limit as string, 10) : undefined,
-      });
+      }, userId);
 
       sendSuccess(res, 'Payments retrieved successfully', result.payments, 200, result.pagination);
     } catch (error: any) {
@@ -56,7 +58,8 @@ export class PaymentController {
   static async getPaymentById(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id as string;
-      const payment = await PaymentService.getPaymentById(id);
+      const userId = (req as any).user?._id;
+      const payment = await PaymentService.getPaymentById(id, userId);
       if (!payment) {
         sendError(res, 'Payment record not found', 404);
         return;
@@ -70,7 +73,8 @@ export class PaymentController {
   static async deletePayment(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id as string;
-      const result = await PaymentService.deletePayment(id);
+      const userId = (req as any).user?._id;
+      const result = await PaymentService.deletePayment(id, userId);
       sendSuccess(res, result.message);
     } catch (error: any) {
       sendError(res, error.message || 'Failed to delete payment', 500);

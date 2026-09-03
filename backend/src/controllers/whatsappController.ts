@@ -7,6 +7,8 @@ export class WhatsAppController {
   static async sendBill(req: Request, res: Response): Promise<void> {
     try {
       const { billId, recipientPhone, customNote } = req.body;
+      const userId = (req as any).user?._id;
+
       if (!billId) {
         sendError(res, 'Bill ID is required', 400);
         return;
@@ -16,7 +18,13 @@ export class WhatsAppController {
         billId,
         recipientPhone,
         customNote,
+        userId,
       });
+
+      if (message.status === 'FAILED') {
+        sendError(res, `WhatsApp delivery failed: ${message.errorMessage || 'Unknown error'}`, 502, [message.errorMessage]);
+        return;
+      }
 
       sendSuccess(res, 'Bill sent via WhatsApp successfully', message);
     } catch (error: any) {
@@ -27,6 +35,8 @@ export class WhatsAppController {
   static async sendReminder(req: Request, res: Response): Promise<void> {
     try {
       const { customerId, customMessage } = req.body;
+      const userId = (req as any).user?._id;
+
       if (!customerId) {
         sendError(res, 'Customer ID is required', 400);
         return;
@@ -35,7 +45,13 @@ export class WhatsAppController {
       const message = await WhatsAppService.sendPaymentReminder({
         customerId,
         customMessage,
+        userId,
       });
+
+      if (message.status === 'FAILED') {
+        sendError(res, `WhatsApp reminder delivery failed: ${message.errorMessage || 'Unknown error'}`, 502, [message.errorMessage]);
+        return;
+      }
 
       sendSuccess(res, 'Payment reminder sent via WhatsApp successfully', message);
     } catch (error: any) {
@@ -46,6 +62,7 @@ export class WhatsAppController {
   static async getHistory(req: Request, res: Response): Promise<void> {
     try {
       const { customerId, messageType, status, page, limit } = req.query;
+      const userId = (req as any).user?._id;
 
       const result = await WhatsAppService.getHistory({
         customerId: customerId as string,
@@ -53,7 +70,7 @@ export class WhatsAppController {
         status: status as string,
         page: page ? parseInt(page as string, 10) : undefined,
         limit: limit ? parseInt(limit as string, 10) : undefined,
-      });
+      }, userId);
 
       sendSuccess(res, 'WhatsApp message history retrieved', result.messages, 200, result.pagination);
     } catch (error: any) {

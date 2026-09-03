@@ -72,10 +72,11 @@ export class CustomerService {
     );
   }
 
-  static async createCustomer(data: Partial<ICustomer>): Promise<ICustomer> {
+  static async createCustomer(data: Partial<ICustomer>, userId?: any): Promise<ICustomer> {
     const customerId = await generateCustomerId();
     const customer = new Customer({
       ...data,
+      ...(userId ? { userId } : {}),
       customerId,
       totalBillAmount: 0,
       totalPaidAmount: 0,
@@ -85,12 +86,15 @@ export class CustomerService {
     return customer.save();
   }
 
-  static async getCustomers(options: CustomerFilterOptions) {
+  static async getCustomers(options: CustomerFilterOptions, userId?: any) {
     const page = Math.max(1, Number(options.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(options.limit) || 20));
     const skip = (page - 1) * limit;
 
     const query: any = {};
+    if (userId) {
+      query.userId = userId;
+    }
 
     if (options.search && options.search.trim()) {
       const searchRegex = new RegExp(options.search.trim(), 'i');
@@ -128,19 +132,26 @@ export class CustomerService {
     };
   }
 
-  static async getCustomerById(id: string): Promise<ICustomer | null> {
-    return Customer.findById(id);
+  static async getCustomerById(id: string, userId?: any): Promise<ICustomer | null> {
+    const query = userId ? { _id: id, userId } : { _id: id };
+    return Customer.findOne(query);
   }
 
-  static async updateCustomer(id: string, data: Partial<ICustomer>): Promise<ICustomer | null> {
-    return Customer.findByIdAndUpdate(
-      id,
+  static async updateCustomer(id: string, data: Partial<ICustomer>, userId?: any): Promise<ICustomer | null> {
+    const query = userId ? { _id: id, userId } : { _id: id };
+    return Customer.findOneAndUpdate(
+      query,
       { ...data, lastActivity: new Date() },
       { new: true, runValidators: true }
     );
   }
 
-  static async deleteCustomer(id: string): Promise<{ success: boolean; message: string }> {
+  static async deleteCustomer(id: string, userId?: any): Promise<{ success: boolean; message: string }> {
+    const query = userId ? { _id: id, userId } : { _id: id };
+    const customer = await Customer.findOne(query);
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
     const billCount = await Bill.countDocuments({ customer: id });
     if (billCount > 0) {
       // Prevent accidental deletion or cascade
@@ -154,8 +165,9 @@ export class CustomerService {
   /**
    * Generates a chronologically sorted ledger with accurate running balances
    */
-  static async getCustomerLedger(customerId: string) {
-    const customer = await Customer.findById(customerId).lean();
+  static async getCustomerLedger(customerId: string, userId?: any) {
+    const query = userId ? { _id: customerId, userId } : { _id: customerId };
+    const customer = await Customer.findOne(query).lean();
     if (!customer) {
       throw new Error('Customer not found');
     }

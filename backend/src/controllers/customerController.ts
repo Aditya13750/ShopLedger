@@ -12,6 +12,7 @@ export class CustomerController {
         return;
       }
 
+      const userId = (req as any).user?._id;
       const customer = await CustomerService.createCustomer({
         name,
         phoneNumber,
@@ -19,7 +20,7 @@ export class CustomerController {
         email,
         address,
         notes,
-      });
+      }, userId);
 
       sendSuccess(res, 'Customer created successfully', customer, 201);
     } catch (error: any) {
@@ -30,6 +31,7 @@ export class CustomerController {
   static async getCustomers(req: Request, res: Response): Promise<void> {
     try {
       const { search, dueFilter, sortBy, sortOrder, page, limit } = req.query;
+      const userId = (req as any).user?._id;
 
       const result = await CustomerService.getCustomers({
         search: search as string,
@@ -38,7 +40,7 @@ export class CustomerController {
         sortOrder: sortOrder as any,
         page: page ? parseInt(page as string, 10) : undefined,
         limit: limit ? parseInt(limit as string, 10) : undefined,
-      });
+      }, userId);
 
       sendSuccess(res, 'Customers retrieved successfully', result.customers, 200, result.pagination);
     } catch (error: any) {
@@ -49,7 +51,8 @@ export class CustomerController {
   static async getCustomerById(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id as string;
-      const customer = await CustomerService.getCustomerById(id);
+      const userId = (req as any).user?._id;
+      const customer = await CustomerService.getCustomerById(id, userId);
       if (!customer) {
         sendError(res, 'Customer not found', 404);
         return;
@@ -63,7 +66,8 @@ export class CustomerController {
   static async updateCustomer(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id as string;
-      const updated = await CustomerService.updateCustomer(id, req.body);
+      const userId = (req as any).user?._id;
+      const updated = await CustomerService.updateCustomer(id, req.body, userId);
       if (!updated) {
         sendError(res, 'Customer not found', 404);
         return;
@@ -77,7 +81,8 @@ export class CustomerController {
   static async deleteCustomer(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id as string;
-      const result = await CustomerService.deleteCustomer(id);
+      const userId = (req as any).user?._id;
+      const result = await CustomerService.deleteCustomer(id, userId);
       sendSuccess(res, result.message);
     } catch (error: any) {
       sendError(res, error.message || 'Failed to delete customer', 500);
@@ -87,7 +92,8 @@ export class CustomerController {
   static async getCustomerLedger(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id as string;
-      const ledgerData = await CustomerService.getCustomerLedger(id);
+      const userId = (req as any).user?._id;
+      const ledgerData = await CustomerService.getCustomerLedger(id, userId);
       sendSuccess(res, 'Customer ledger generated successfully', ledgerData);
     } catch (error: any) {
       sendError(res, error.message || 'Failed to generate customer ledger', 500);

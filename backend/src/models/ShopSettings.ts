@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IShopSettings extends Document {
+  userId?: mongoose.Types.ObjectId;
   shopName: string;
   shopPhone: string;
   shopEmail?: string;
@@ -25,6 +26,7 @@ export interface IShopSettings extends Document {
 
 const shopSettingsSchema = new Schema<IShopSettings>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     shopName: { type: String, required: true, default: 'ShopLedger Mart' },
     shopPhone: { type: String, required: true, default: '+919876543210' },
     shopEmail: { type: String, default: 'support@shopledger.com' },

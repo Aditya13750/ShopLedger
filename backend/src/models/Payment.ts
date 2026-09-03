@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPayment extends Document {
+  userId: mongoose.Types.ObjectId;
   customer: mongoose.Types.ObjectId;
   bill?: mongoose.Types.ObjectId;
   amount: number;
@@ -14,6 +15,7 @@ export interface IPayment extends Document {
 
 const paymentSchema = new Schema<IPayment>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     customer: { type: Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
     bill: { type: Schema.Types.ObjectId, ref: 'Bill', index: true },
     amount: { type: Number, required: true, min: 0.01 },

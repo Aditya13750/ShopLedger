@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IWhatsAppMessage extends Document {
+  userId?: mongoose.Types.ObjectId;
   customer: mongoose.Types.ObjectId;
   bill?: mongoose.Types.ObjectId;
   messageType: 'BILL' | 'REMINDER' | 'CUSTOM';
@@ -18,6 +19,7 @@ export interface IWhatsAppMessage extends Document {
 
 const whatsAppMessageSchema = new Schema<IWhatsAppMessage>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     customer: { type: Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
     bill: { type: Schema.Types.ObjectId, ref: 'Bill', index: true },
     messageType: {

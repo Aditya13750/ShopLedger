@@ -14,6 +14,7 @@ export interface IBillImage {
 }
 
 export interface IBill extends Document {
+  userId: mongoose.Types.ObjectId;
   billNumber: string;
   customer: mongoose.Types.ObjectId;
   billDate: Date;
@@ -43,6 +44,7 @@ const billItemSchema = new Schema<IBillItem>(
 
 const billSchema = new Schema<IBill>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     billNumber: { type: String, required: true, unique: true, index: true },
     customer: { type: Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
     billDate: { type: Date, required: true, default: Date.now },

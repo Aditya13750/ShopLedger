@@ -91,6 +91,7 @@ const assert = (condition: boolean, testName: string) => {
   console.log('\n--- Test Suite 3: WhatsApp Phone Sanitization ---');
   assert(WhatsAppService.cleanPhoneNumber('+91 98765 43210') === '919876543210', 'Strips + and spaces');
   assert(WhatsAppService.cleanPhoneNumber('9876543210') === '919876543210', 'Adds 91 to 10-digit Indian numbers');
+  assert(WhatsAppService.cleanPhoneNumber('08084316170') === '918084316170', 'Strips leading 0 and adds 91 for Indian numbers');
   assert(WhatsAppService.cleanPhoneNumber('14155552671') === '14155552671', 'Preserves international country codes');
 })();
 
